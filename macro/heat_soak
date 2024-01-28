@@ -1,0 +1,24 @@
+[gcode_macro HEAT_SOAK]
+gcode:
+  {% set MIN_TEMP = 35 %}
+  {% set TARGET_TEMP = params.CHAMBER_TEMP | default(40) | float %}
+  {% set CHAMBER_CURRENT_TEMP = printer["temperature_sensor chamber"].temperature %}
+
+  {% if TARGET_TEMP > CHAMBER_CURRENT_TEMP %}
+    { action_respond_info('Chamber temperature is %.1fC. Heating to above %.1fC' % (CHAMBER_CURRENT_TEMP, TARGET_TEMP)) }
+    SET_HEATER_TEMPERATURE HEATER=extruder TARGET=50
+    SET_HEATER_TEMPERATURE HEATER=heater_bed TARGET=110
+    SET_PIN PIN=leds VALUE=0.10
+    SET_FAN_SPEED FAN=filter_fan SPEED=1
+    SET_FAN_SPEED FAN=nevermore_fan SPEED=0.50
+    M106 S255
+    G28
+    G0 X175 Y175 Z30 F3600
+    TEMPERATURE_WAIT SENSOR="temperature_sensor chamber" MINIMUM={params.CHAMBER_TEMP} ; Wait for chamber temp
+  {% else %}
+    {% if TARGET_TEMP < MIN_TEMP %}
+      { action_respond_info('Turning off chamber fans')}
+      SET_FAN_SPEED FAN=filter_fan SPEED=0
+      SET_FAN_SPEED FAN=nevermore_fan SPEED=0
+    {% endif %}
+ {% endif %}
